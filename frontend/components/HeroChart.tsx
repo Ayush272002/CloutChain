@@ -21,8 +21,6 @@ interface CandlestickData {
   close: number;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL!;
-
 const HeroChart = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -46,7 +44,7 @@ const HeroChart = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/v1/olhc`);
+      const response = await axios.get("http://localhost:8000/api/v1/olhc");
       setData(response.data);
 
       // Calculate price change for display
