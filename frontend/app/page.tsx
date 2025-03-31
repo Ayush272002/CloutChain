@@ -117,7 +117,7 @@ export default function Page() {
                 <Button
                   variant="outline"
                   size="lg"
-                  className="border-gray-700 text-black hover:bg-slate-200 cursor-pointer"
+                  className="border-gray-400 hover:bg-slate-200 text-white bg-transparent"
                 >
                   Watch Demo
                 </Button>
