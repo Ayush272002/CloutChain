@@ -5,6 +5,8 @@ import { parse } from "json2csv";
 interface PriceDataPoint {
   timestamp: number;
   price: number;
+  marketCap: number;
+  volume: number;
 }
 
 interface OHLCData {
@@ -13,6 +15,8 @@ interface OHLCData {
   high: number;
   low: number;
   close: number;
+  marketCap: number;
+  volume: number;
 }
 
 const fetchZoraOHLCDataFromCoinGecko = async () => {
@@ -36,11 +40,13 @@ const fetchZoraOHLCDataFromCoinGecko = async () => {
       }
     );
 
-    // Extract price data
+    // Extract price, market cap, and volume data
     const priceData: PriceDataPoint[] = response.data.prices.map(
-      ([timestamp, price]: [number, number]) => ({
+      ([timestamp, price]: [number, number], index: number) => ({
         timestamp,
         price,
+        marketCap: response.data.market_caps[index][1],
+        volume: response.data.total_volumes[index][1],
       })
     );
 
@@ -55,7 +61,6 @@ const fetchZoraOHLCDataFromCoinGecko = async () => {
         i === priceData.length - 1 ||
         currentDate !== new Date(priceData[i + 1].timestamp).toDateString()
       ) {
-        // Add current price to the day's prices
         currentDayPrices.push(priceData[i]);
 
         // Calculate OHLC for the day
@@ -65,6 +70,8 @@ const fetchZoraOHLCDataFromCoinGecko = async () => {
           high: Math.max(...currentDayPrices.map((p) => p.price)),
           low: Math.min(...currentDayPrices.map((p) => p.price)),
           close: currentDayPrices[currentDayPrices.length - 1].price,
+          marketCap: currentDayPrices[currentDayPrices.length - 1].marketCap,
+          volume: currentDayPrices.reduce((acc, p) => acc + p.volume, 0),
         };
 
         dailyOHLC.push(dayOHLC);
@@ -86,10 +93,10 @@ const saveOHLCDataToCSV = async () => {
   if (data.length > 0) {
     try {
       const csv = parse(data);
-      writeFileSync("zora-ohlc-history-from-beginning.csv", csv);
-      console.log("OHLC data saved to zora-ohlc-history-from-beginning.csv");
+      writeFileSync("zora-ohlc-market-data.csv", csv);
+      console.log("OHLC market data saved to zora-ohlc-market-data.csv");
     } catch (error) {
-      console.error("Error writing OHLC data to CSV:", error);
+      console.error("Error writing OHLC market data to CSV:", error);
     }
   } else {
     console.log("No data to save.");
