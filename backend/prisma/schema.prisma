@@ -1,0 +1,132 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // You can change this to your preferred database
+  url      = env("DATABASE_URL")
+}
+
+model Coin {
+  id                String   @id @default(uuid())
+  address           String   @unique
+  name              String
+  symbol            String
+  description       String?
+  totalSupply       String?
+  totalVolume       String?
+  volume24h         String?
+  marketCap         String?
+  marketCapDelta24h String?
+  createdAt         DateTime
+  creatorAddress    String?
+  uniqueHolders     Int?
+  transferCount     Int?
+
+  // Media content
+  mediaMimeType    String?
+  mediaOriginalUri String?
+  mediaPreviewUrl  String?
+
+  // Relations
+  creatorProfile  Profile?         @relation(fields: [creatorAddress], references: [address])
+  comments        Comment[]
+  creatorEarnings CreatorEarning[]
+
+  // Timestamps
+  updatedAt DateTime @updatedAt
+  scrapedAt DateTime @default(now())
+
+  @@index([creatorAddress])
+}
+
+model Profile {
+  address   String  @id
+  handle    String?
+  avatarUrl String?
+
+  // Relations
+  coins        Coin[]
+  comments     Comment[]
+  replies      Reply[]
+  coinBalances CoinBalance[]
+
+  // Timestamps
+  updatedAt DateTime @updatedAt
+  scrapedAt DateTime @default(now())
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  txHash    String   @unique
+  comment   String
+  timestamp DateTime
+
+  // Relations
+  coinAddress String
+  coin        Coin    @relation(fields: [coinAddress], references: [address])
+  userAddress String
+  userProfile Profile @relation(fields: [userAddress], references: [address])
+  replies     Reply[]
+
+  // Timestamps
+  updatedAt DateTime @updatedAt
+  scrapedAt DateTime @default(now())
+
+  @@index([coinAddress])
+  @@index([userAddress])
+}
+
+model Reply {
+  id        String   @id @default(uuid())
+  comment   String
+  timestamp DateTime
+
+  // Relations
+  commentId     String
+  parentComment Comment @relation(fields: [commentId], references: [id])
+  userAddress   String
+  userProfile   Profile @relation(fields: [userAddress], references: [address])
+
+  // Timestamps
+  updatedAt DateTime @updatedAt
+  scrapedAt DateTime @default(now())
+
+  @@index([commentId])
+  @@index([userAddress])
+}
+
+model CreatorEarning {
+  id        String @id @default(uuid())
+  amountUsd String
+
+  // Relations
+  coinId String
+  coin   Coin   @relation(fields: [coinId], references: [id])
+
+  // Timestamps
+  updatedAt DateTime @updatedAt
+  scrapedAt DateTime @default(now())
+
+  @@index([coinId])
+}
+
+model CoinBalance {
+  id String @id @default(uuid())
+
+  // Relations
+  profileAddress String
+  profile        Profile @relation(fields: [profileAddress], references: [address])
+  coinAddress    String
+  amountUsd      String?
+
+  // Timestamps
+  updatedAt DateTime @updatedAt
+  scrapedAt DateTime @default(now())
+
+  @@unique([profileAddress, coinAddress])
+  @@index([profileAddress])
+}
