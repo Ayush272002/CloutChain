@@ -25,6 +25,10 @@ model Coin {
   creatorAddress    String?
   uniqueHolders     Int?
   transferCount     Int?
+  sentiment_similarity Float?
+  embed_similarity     Float?
+  finance_similarity    Float?
+  total_similarity       Float?
 
   // Media content
   mediaMimeType    String?
@@ -33,7 +37,6 @@ model Coin {
 
   // Relations
   creatorProfile  Profile?         @relation(fields: [creatorAddress], references: [address])
-  comments        Comment[]
   creatorEarnings CreatorEarning[]
 
   // Timestamps
@@ -50,53 +53,10 @@ model Profile {
 
   // Relations
   coins        Coin[]
-  comments     Comment[]
-  replies      Reply[]
-  coinBalances CoinBalance[]
 
   // Timestamps
   updatedAt DateTime @updatedAt
   scrapedAt DateTime @default(now())
-}
-
-model Comment {
-  id        String   @id @default(uuid())
-  txHash    String   @unique
-  comment   String
-  timestamp DateTime
-
-  // Relations
-  coinAddress String
-  coin        Coin    @relation(fields: [coinAddress], references: [address])
-  userAddress String
-  userProfile Profile @relation(fields: [userAddress], references: [address])
-  replies     Reply[]
-
-  // Timestamps
-  updatedAt DateTime @updatedAt
-  scrapedAt DateTime @default(now())
-
-  @@index([coinAddress])
-  @@index([userAddress])
-}
-
-model Reply {
-  id        String   @id @default(uuid())
-  comment   String
-  timestamp DateTime
-
-  // Relations
-  commentId     String
-  parentComment Comment @relation(fields: [commentId], references: [id])
-  userAddress   String
-  userProfile   Profile @relation(fields: [userAddress], references: [address])
-
-  // Timestamps
-  updatedAt DateTime @updatedAt
-  scrapedAt DateTime @default(now())
-
-  @@index([commentId])
-  @@index([userAddress])
 }
 
 model CreatorEarning {
@@ -112,21 +72,4 @@ model CreatorEarning {
   scrapedAt DateTime @default(now())
 
   @@index([coinId])
-}
-
-model CoinBalance {
-  id String @id @default(uuid())
-
-  // Relations
-  profileAddress String
-  profile        Profile @relation(fields: [profileAddress], references: [address])
-  coinAddress    String
-  amountUsd      String?
-
-  // Timestamps
-  updatedAt DateTime @updatedAt
-  scrapedAt DateTime @default(now())
-
-  @@unique([profileAddress, coinAddress])
-  @@index([profileAddress])
 }
