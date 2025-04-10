@@ -65,10 +65,10 @@ export const calculateTotalSimilarity = async (req: Request, res: Response) => {
           payload
         );
 
-        sentiment_similarity = response.data.sentiment_similarity;
-        embed_similarity = response.data.embed_similarity;
-        finance_similarity = response.data.finance_similarity;
-        total_similarity = response.data.total_similarity;
+        sentiment_similarity = response.data.weighted_sentiment_similarity;
+        embed_similarity = response.data.weighted_embed_similarity;
+        finance_similarity = response.data.weighted_financial_similarity;
+        total_similarity = response.data.weighted_total_similarity;
 
         await prisma.coin.upsert({
           where: { address },
