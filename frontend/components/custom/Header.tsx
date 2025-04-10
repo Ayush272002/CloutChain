@@ -19,6 +19,7 @@ const TAP_SCALE = 0.95;
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   /**
    * Handles smooth scrolling to target sections
@@ -70,7 +71,7 @@ export function Header() {
     }
   }, []);
 
-  const navItems = ["how-it-works", "trending", "auto-trade", "try-it"];
+  const navItems = ["how-it-works", "trending", "auto-trade"];
 
   return (
     <motion.header
