@@ -33,13 +33,20 @@ export const calculateTotalSimilarity = async (req: Request, res: Response) => {
       });
 
       if (creatorAddress) {
-        await prisma.profile.upsert({
-          where: { address: creatorAddress },
-          update: {}, 
-          create: {
-            address: creatorAddress,
-          },
-        });
+        try {
+          await prisma.profile.upsert({
+            where: { address: creatorAddress },
+            update: {},
+            create: { address: creatorAddress },
+          });
+        } catch (error) {
+          // @ts-ignore
+          if (error.code === 'P2002') {
+            console.warn(`Profile with address ${creatorAddress} already exists.`);
+          } else {
+            throw error; // Rethrow other errors
+          }
+        }
       }
 
       let sentiment_similarity,
@@ -105,7 +112,7 @@ export const calculateTotalSimilarity = async (req: Request, res: Response) => {
         });
       }
 
-      const predictionScore = parseFloat(total_similarity.toFixed(1));
+      const predictionScore = parseFloat(total_similarity);
       const confidence = parseFloat(
         (
           (sentiment_similarity + embed_similarity + finance_similarity) /
