@@ -124,7 +124,7 @@ export const calculateTotalSimilarity = async (req: Request, res: Response) => {
       const { status, statusColor } = getPredictionStatus(predictionScore);
 
       predictions.push({
-        id: coin.id ?? `ZOR-${Math.floor(Math.random() * 10000)}`,
+        id: coin.address,
         type,
         prediction: predictionScore,
         confidence,

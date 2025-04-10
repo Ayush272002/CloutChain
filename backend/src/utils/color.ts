@@ -1,6 +1,6 @@
 export function getPredictionStatus(score: number) {
-  if (score >= 85) return { status: "Active", statusColor: "green" };
-  if (score >= 70) return { status: "Watching", statusColor: "orange" };
+  if (score >= 60) return { status: "Active", statusColor: "green" };
+  if (score >= 50) return { status: "Watching", statusColor: "orange" };
   return { status: "Low Potential", statusColor: "red" };
 }
 

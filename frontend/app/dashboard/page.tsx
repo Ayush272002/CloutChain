@@ -3,15 +3,11 @@
 import { useEffect, useState } from "react";
 import {
   BellRing,
-  LogOut,
   Menu,
   MoreHorizontal,
   Plus,
   Search,
-  Settings,
   TrendingUp,
-  User,
-  Wallet,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -26,7 +22,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -39,7 +34,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import {
   Area,
@@ -55,6 +49,9 @@ import NeuralNetworkAnimation from "@/components/NeuralNetworkAnimation";
 import MobileSidebar from "@/components/MobileSidebar";
 import DesktopSidebar from "@/components/DesktopSidebar";
 import axios from "axios";
+import WalletConnect from "@/components/WalletConnect";
+import { useAccount } from "wagmi";
+import TradeModal from "@/components/TradeModal";
 
 // Sample data for charts
 const viralityData = [
@@ -66,63 +63,6 @@ const viralityData = [
   { day: "Sat", score: 90, confidence: 97 },
   { day: "Sun", score: 95, confidence: 98 },
 ];
-
-// const recentPredictions = [
-//   {
-//     id: "ZOR-8291",
-//     type: "Image",
-//     prediction: 87.6,
-//     confidence: 98.2,
-//     timeToViral: 4.2,
-//     status: "Active",
-//     statusColor: "green",
-//   },
-//   {
-//     id: "ZOR-8290",
-//     type: "Video",
-//     prediction: 92.3,
-//     confidence: 97.5,
-//     timeToViral: 2.8,
-//     status: "Active",
-//     statusColor: "green",
-//   },
-//   {
-//     id: "ZOR-8289",
-//     type: "Collection",
-//     prediction: 68.5,
-//     confidence: 85.1,
-//     timeToViral: 8.4,
-//     status: "Watching",
-//     statusColor: "orange",
-//   },
-//   {
-//     id: "ZOR-8288",
-//     type: "Image",
-//     prediction: 45.2,
-//     confidence: 76.8,
-//     timeToViral: 12.6,
-//     status: "Low Potential",
-//     statusColor: "red",
-//   },
-//   {
-//     id: "ZOR-8287",
-//     type: "Video",
-//     prediction: 79.4,
-//     confidence: 91.3,
-//     timeToViral: 5.7,
-//     status: "Active",
-//     statusColor: "green",
-//   },
-//   {
-//     id: "ZOR-8286",
-//     type: "Collection",
-//     prediction: 83.1,
-//     confidence: 94.7,
-//     timeToViral: 3.9,
-//     status: "Active",
-//     statusColor: "green",
-//   },
-// ];
 
 type Prediction = {
   id: string;
@@ -137,9 +77,16 @@ type Prediction = {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL!;
 
 export default function Dashboard() {
+  const { isConnected } = useAccount();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [recentPredictions, setRecentPredictions] = useState<Prediction[]>([]);
+  const [tradeModalOpen, setTradeModalOpen] = useState(false);
+  const [selectedCoin, setSelectedCoin] = useState({
+    address: "",
+    name: "",
+    predictionScore: 0,
+  });
 
   const fetchPrediction = async () => {
     try {
@@ -159,6 +106,19 @@ export default function Dashboard() {
   useEffect(() => {
     fetchPrediction();
   }, []);
+
+  const openTradeModal = (
+    coinAddress: string,
+    name = "Unknown",
+    predictionScore = 0
+  ) => {
+    setSelectedCoin({
+      address: coinAddress,
+      name,
+      predictionScore,
+    });
+    setTradeModalOpen(true);
+  };
 
   return (
     <div className="flex min-h-screen bg-black text-white">
@@ -222,45 +182,7 @@ export default function Dashboard() {
               AI Active
             </Badge>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage
-                      src="/placeholder.svg?height=32&width=32"
-                      alt="User"
-                    />
-                    <AvatarFallback className="bg-purple-900/50 text-white">
-                      JP
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="w-56 bg-zinc-900 border-purple-900/30"
-              >
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator className="bg-purple-900/30" />
-                <DropdownMenuItem className="hover:bg-purple-900/20 cursor-pointer">
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="hover:bg-purple-900/20 cursor-pointer">
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="hover:bg-purple-900/20 cursor-pointer">
-                  <Wallet className="mr-2 h-4 w-4" />
-                  <span>Billing</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-purple-900/30" />
-                <DropdownMenuItem className="hover:bg-purple-900/20 cursor-pointer">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <WalletConnect />
           </div>
         </header>
 
@@ -507,7 +429,7 @@ export default function Dashboard() {
                           <thead>
                             <tr className="border-b border-purple-900/30">
                               <th className="text-left py-3 px-2 text-xs font-medium text-zinc-400">
-                                Content ID
+                                Address
                               </th>
                               <th className="text-left py-3 px-2 text-xs font-medium text-zinc-400">
                                 Type
@@ -519,9 +441,6 @@ export default function Dashboard() {
                                 Confidence
                               </th>
                               <th className="text-left py-3 px-2 text-xs font-medium text-zinc-400">
-                                Time to Viral
-                              </th>
-                              <th className="text-left py-3 px-2 text-xs font-medium text-zinc-400">
                                 Status
                               </th>
                               <th className="text-left py-3 px-2 text-xs font-medium text-zinc-400">
@@ -530,42 +449,45 @@ export default function Dashboard() {
                             </tr>
                           </thead>
                           <tbody>
-                            {recentPredictions.map((prediction, index) => (
-                              <tr
-                                key={prediction.id}
-                                className={`border-b border-purple-900/20 hover:bg-purple-900/10 transition-colors ${
-                                  index === recentPredictions.length - 1
-                                    ? "border-b-0"
-                                    : ""
-                                }`}
-                              >
-                                <td className="py-3 px-2 text-sm">
-                                  {prediction.id}
-                                </td>
-                                <td className="py-3 px-2 text-sm">
-                                  {prediction.type}
-                                </td>
-                                <td
-                                  className={`py-3 px-2 text-sm ${
-                                    prediction.prediction > 80
-                                      ? "text-green-400"
-                                      : prediction.prediction > 60
-                                      ? "text-yellow-400"
-                                      : "text-red-400"
+                            {recentPredictions
+                              .filter(
+                                (prediction) =>
+                                  prediction.prediction &&
+                                  prediction.timeToViral
+                              )
+                              .map((prediction, index) => (
+                                <tr
+                                  key={prediction.id}
+                                  className={`border-b border-purple-900/20 hover:bg-purple-900/10 transition-colors ${
+                                    index === recentPredictions.length - 1
+                                      ? "border-b-0"
+                                      : ""
                                   }`}
                                 >
-                                  {prediction.prediction}%
-                                </td>
-                                <td className="py-3 px-2 text-sm">
-                                  {prediction.confidence}%
-                                </td>
-                                <td className="py-3 px-2 text-sm text-fuchsia-400">
-                                  {prediction.timeToViral}h
-                                </td>
-                                <td className="py-3 px-2">
-                                  <Badge
-                                    variant="outline"
-                                    className={`
+                                  <td className="py-3 px-2 text-sm">
+                                    {prediction.id}
+                                  </td>
+                                  <td className="py-3 px-2 text-sm">
+                                    {prediction.type}
+                                  </td>
+                                  <td
+                                    className={`py-3 px-2 text-sm ${
+                                      prediction.prediction > 60
+                                        ? "text-green-400"
+                                        : prediction.prediction > 50
+                                        ? "text-yellow-400"
+                                        : "text-red-400"
+                                    }`}
+                                  >
+                                    {prediction.prediction.toFixed(2)}%
+                                  </td>
+                                  <td className="py-3 px-2 text-sm">
+                                    {prediction.confidence}%
+                                  </td>
+                                  <td className="py-3 px-2">
+                                    <Badge
+                                      variant="outline"
+                                      className={`
                                       ${
                                         prediction.statusColor === "green"
                                           ? "bg-green-900/20 text-green-400 border-green-500/30"
@@ -574,21 +496,28 @@ export default function Dashboard() {
                                           : "bg-red-900/20 text-red-400 border-red-500/30"
                                       }
                                     `}
-                                  >
-                                    {prediction.status}
-                                  </Badge>
-                                </td>
-                                <td className="py-3 px-2">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="bg-indigo-900/20 text-indigo-400 border-indigo-500/30 hover:bg-indigo-900/30"
-                                  >
-                                    Trade
-                                  </Button>
-                                </td>
-                              </tr>
-                            ))}
+                                    >
+                                      {prediction.status}
+                                    </Badge>
+                                  </td>
+                                  <td className="py-3 px-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="bg-indigo-900/20 text-indigo-400 border-indigo-500/30 hover:bg-indigo-900/30"
+                                      onClick={() =>
+                                        openTradeModal(
+                                          prediction.id,
+                                          `Coin ${index + 1}`,
+                                          prediction.prediction
+                                        )
+                                      }
+                                    >
+                                      Trade
+                                    </Button>
+                                  </td>
+                                </tr>
+                              ))}
                           </tbody>
                         </table>
                       </div>
@@ -618,7 +547,18 @@ export default function Dashboard() {
                           </span>
                         </div>
                         <div className="pt-2">
-                          <Button className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700">
+                          <Button
+                            className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+                            onClick={() => {
+                              if (recentPredictions.length > 0) {
+                                openTradeModal(
+                                  recentPredictions[0].id,
+                                  `Top Prediction`,
+                                  recentPredictions[0].prediction
+                                );
+                              }
+                            }}
+                          >
                             Execute Trade
                           </Button>
                         </div>
@@ -701,6 +641,14 @@ export default function Dashboard() {
                 </Card>
               </TabsContent>
             </Tabs>
+            {/* Trade Modal */}
+            <TradeModal
+              isOpen={tradeModalOpen}
+              onClose={() => setTradeModalOpen(false)}
+              coinAddress={selectedCoin.address}
+              coinName={selectedCoin.name}
+              predictionScore={selectedCoin.predictionScore}
+            />
           </div>
         </main>
       </div>
