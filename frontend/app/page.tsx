@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -11,9 +12,11 @@ import {
   Flame,
   LineChart,
   Lock,
+  Rocket,
   Zap,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +54,117 @@ const STAGGER_CONTAINER = {
   },
 };
 
+// Neural Network Background component
+const NeuralBackground = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Set canvas size
+    const updateCanvasSize = () => {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+    };
+
+    updateCanvasSize();
+    window.addEventListener("resize", updateCanvasSize);
+
+    // Particle settings
+    const particles: {
+      x: number;
+      y: number;
+      size: number;
+      speedX: number;
+      speedY: number;
+    }[] = [];
+
+    const particleCount = Math.min(Math.floor(window.innerWidth / 20), 70);
+    const connectionDistance = 150;
+    const colors = [
+      "rgba(0, 132, 255, 0.4)",
+      "rgba(92, 221, 255, 0.4)",
+      "rgba(0, 180, 216, 0.4)",
+    ];
+
+    // Create particles
+    for (let i = 0; i < particleCount; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        size: Math.random() * 2 + 1,
+        speedX: (Math.random() - 0.5) * 0.4,
+        speedY: (Math.random() - 0.5) * 0.4,
+      });
+    }
+
+    const animate = () => {
+      requestAnimationFrame(animate);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Update and draw particles
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        p.x += p.speedX;
+        p.y += p.speedY;
+
+        // Bounce off edges
+        if (p.x < 0 || p.x > canvas.width) p.speedX *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.speedY *= -1;
+
+        // Draw particle
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+        ctx.fill();
+
+        // Draw connections
+        for (let j = i + 1; j < particles.length; j++) {
+          const p2 = particles[j];
+          const distance = Math.sqrt(
+            Math.pow(p.x - p2.x, 2) + Math.pow(p.y - p2.y, 2)
+          );
+
+          if (distance < connectionDistance) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = `rgba(0, 132, 255, ${
+              0.2 - (distance / connectionDistance) * 0.15
+            })`;
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+          }
+        }
+      }
+
+      // Optional: Add a small indicator dot in bottom right to confirm the canvas is active
+      ctx.beginPath();
+      ctx.arc(canvas.width - 10, canvas.height - 10, 3, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(0, 132, 255, 0.7)";
+      ctx.fill();
+    };
+
+    animate();
+
+    return () => {
+      window.removeEventListener("resize", updateCanvasSize);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-60 z-1"
+      style={{ display: "block", position: "absolute" }}
+    />
+  );
+};
+
 // TODO: Consider extracting animation constants to a separate config file
 // TODO: Add proper analytics tracking for user interactions
 // TODO: Implement proper error boundaries around motion components
@@ -60,6 +174,20 @@ const STAGGER_CONTAINER = {
  * @returns {React.ReactNode} The rendered home page
  */
 export default function Home(): React.ReactNode {
+  const router = useRouter();
+  const [coinLink, setCoinLink] = useState("");
+  const [email, setEmail] = useState("");
+
+  const handleCoinSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    window.location.href = "/dashboard";
+  };
+
+  const handleEmailSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    window.location.href = "/dashboard";
+  };
+
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
@@ -71,20 +199,25 @@ export default function Home(): React.ReactNode {
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
           variants={FADE_UP}
-          className="section bg-snow py-8 md:py-12"
+          className="section bg-snow py-8 md:py-12 relative overflow-hidden"
         >
-          <div className="container-tight px-4 md:px-6">
+          <div className="absolute inset-0 bg-sky/5"></div>
+          <NeuralBackground />
+          <div className="container-tight px-4 md:px-6 relative z-10">
             <div className="grid gap-8 lg:grid-cols-2 lg:gap-16 items-center">
               <motion.div variants={FADE_IN} className="space-y-6 md:space-y-8">
                 <h1 className="font-display text-3xl md:text-4xl lg:text-5xl">
-                  <span className="text-electric">Predict</span> Zora virality
-                  in real time
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-electric to-blue-500">
+                    Predict
+                  </span>{" "}
+                  the Next Viral Zora Content
                 </h1>
                 <p className="text-lg md:text-xl text-stone">
                   Leverage AI-powered analytics to identify trending coins
                   before they explode in popularity.
                 </p>
-                <motion.div
+                <motion.form
+                  onSubmit={handleCoinSubmit}
                   variants={FADE_UP}
                   className="flex flex-col sm:flex-row gap-4 max-w-full sm:max-w-md"
                 >
@@ -92,17 +225,20 @@ export default function Home(): React.ReactNode {
                     <Input
                       placeholder="Paste a Zora coin link"
                       className="h-12 rounded-full"
+                      value={coinLink}
+                      onChange={(e) => setCoinLink(e.target.value)}
                     />
                   </div>
                   <div className="w-full sm:w-auto">
                     <Button
+                      type="submit"
                       size="lg"
                       className="rounded-full w-full sm:w-auto px-4 sm:px-8 bg-electric hover:bg-electric/90"
                     >
                       Predict Now
                     </Button>
                   </div>
-                </motion.div>
+                </motion.form>
               </motion.div>
 
               {/* Hero image placeholder */}
@@ -112,7 +248,7 @@ export default function Home(): React.ReactNode {
                 className="relative h-[300px] md:h-[400px] w-full rounded-xl border bg-ghost p-2 shadow-sm"
               >
                 <Image
-                  src="/placeholder.svg?height=400&width=600"
+                  src="/dashboard.svg?height=400&width=600"
                   alt="Dashboard Preview"
                   width={600}
                   height={400}
@@ -163,24 +299,27 @@ export default function Home(): React.ReactNode {
           viewport={{ once: true, margin: "-100px" }}
           variants={FADE_UP}
           id="how-it-works"
-          className="section-alt py-12 md:py-16"
+          className="section-alt py-12 md:py-16 relative overflow-hidden"
         >
-          <div className="container-tight px-4 md:px-6">
+          <div className="absolute inset-0 bg-sky/5"></div>
+          <NeuralBackground />
+          <div className="container-tight px-4 md:px-6 relative z-10">
             <motion.div
               variants={FADE_IN}
               className="flex flex-col max-w-2xl mx-auto text-center mb-12 md:mb-16"
             >
-              <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4">
+              <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-electric to-blue-500">
                 How It Works
               </h2>
               <p className="mt-2 md:mt-4 text-base md:text-lg text-stone">
                 Our AI-powered platform analyses multiple signals to predict
-                social content virality with precision
+                social content virality with precision and executes trades at
+                optimal times
               </p>
             </motion.div>
             <motion.div
               variants={STAGGER_CONTAINER}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8"
             >
               {[
                 {
@@ -203,11 +342,21 @@ export default function Home(): React.ReactNode {
                   title: "Auto-Trade",
                   desc: "Set thresholds and let our platform execute trades automatically",
                 },
+                {
+                  icon: Clock,
+                  title: "Real-Time Analysis",
+                  desc: "Millisecond scanning of new posts with our distributed neural network",
+                },
+                {
+                  icon: Rocket,
+                  title: "Predictive Scheduling",
+                  desc: "Schedule trades with our AI that predicts optimal execution times",
+                },
               ].map((item, i) => (
                 <motion.div
                   key={i}
                   variants={FADE_UP}
-                  className="flex flex-col items-start space-y-4 rounded-lg p-4 md:p-6"
+                  className="flex flex-col items-start space-y-4 rounded-lg p-4 md:p-6 bg-white/90 backdrop-blur-sm"
                 >
                   <div className="rounded-full bg-sky p-4">
                     <item.icon className="h-5 w-5 md:h-6 md:w-6 text-electric" />
@@ -234,7 +383,7 @@ export default function Home(): React.ReactNode {
           <div className="container-tight px-4 md:px-6">
             <div className="flex flex-col md:flex-row md:justify-between md:items-start lg:items-end mb-8 md:mb-12 gap-4">
               <motion.div variants={FADE_IN} className="max-w-full md:max-w-xl">
-                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2 md:mb-4">
+                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2 md:mb-4 bg-clip-text text-transparent bg-gradient-to-r from-electric to-blue-500">
                   Trending Now
                 </h2>
                 <p className="mt-2 text-base md:text-lg text-stone">
@@ -270,7 +419,7 @@ export default function Home(): React.ReactNode {
                 >
                   <div className="relative">
                     <Image
-                      src={`/placeholder.svg?height=200&width=400&text=Coin%20${i}`}
+                      src={`/dashboard.svg?height=200&width=400&text=Coin%20${i}`}
                       alt={`Trending Coin ${i}`}
                       width={400}
                       height={200}
@@ -293,25 +442,29 @@ export default function Home(): React.ReactNode {
                       </div>
                     </div>
                     <div className="mt-auto pt-4">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full rounded-full border-electric text-electric hover:bg-sky text-xs md:text-sm"
-                      >
-                        Track this Coin
-                      </Button>
+                      <Link href="/dashboard">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full rounded-full border-electric text-electric hover:bg-sky text-xs md:text-sm"
+                        >
+                          Track this Coin
+                        </Button>
+                      </Link>
                     </div>
                   </div>
                 </motion.div>
               ))}
             </motion.div>
             <motion.div variants={FADE_UP} className="mt-8 flex justify-center">
-              <Button
-                variant="outline"
-                className="gap-1 rounded-full border-electric text-electric hover:bg-sky"
-              >
-                View all trending <ChevronRight className="h-4 w-4" />
-              </Button>
+              <Link href="/dashboard">
+                <Button
+                  variant="outline"
+                  className="gap-1 rounded-full border-electric text-electric hover:bg-sky"
+                >
+                  View all trending <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
             </motion.div>
           </div>
         </motion.section>
@@ -331,7 +484,7 @@ export default function Home(): React.ReactNode {
                 variants={FADE_IN}
                 className="space-y-6 md:space-y-8 order-2 lg:order-1"
               >
-                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold">
+                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-electric to-blue-500">
                   Auto-Trade Dashboard
                 </h2>
                 <p className="text-base md:text-lg text-stone">
@@ -380,9 +533,11 @@ export default function Home(): React.ReactNode {
                   </li>
                 </ul>
                 <div className="pt-2 flex justify-center sm:justify-start">
-                  <Button className="gap-2 rounded-full bg-electric hover:bg-electric/90 w-full sm:w-auto">
-                    Explore Auto-Trade <ArrowRight className="h-4 w-4" />
-                  </Button>
+                  <Link href="/dashboard">
+                    <Button className="gap-2 rounded-full bg-electric hover:bg-electric/90 w-full sm:w-auto">
+                      Explore Auto-Trade <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
                 </div>
               </motion.div>
               <motion.div
@@ -391,7 +546,7 @@ export default function Home(): React.ReactNode {
                 className="relative h-[250px] md:h-[400px] w-full rounded-xl border bg-ghost p-2 shadow-sm order-1 lg:order-2"
               >
                 <Image
-                  src="/placeholder.svg?height=400&width=600&text=Auto-Trade%20Dashboard"
+                  src="/dashboard.svg?height=400&width=600&text=Auto-Trade%20Dashboard"
                   alt="Auto-Trade Dashboard"
                   width={600}
                   height={400}
@@ -409,14 +564,16 @@ export default function Home(): React.ReactNode {
           viewport={{ once: true, margin: "-100px" }}
           variants={FADE_UP}
           id="docs"
-          className="section-alt py-12 md:py-16"
+          className="section-alt py-12 md:py-16 relative overflow-hidden"
         >
-          <div className="container-tight px-4 md:px-6">
+          <div className="absolute inset-0 bg-sky/5"></div>
+          <NeuralBackground />
+          <div className="container-tight px-4 md:px-6 relative z-10">
             <motion.div
               variants={FADE_IN}
               className="flex flex-col max-w-2xl mx-auto text-center mb-12"
             >
-              <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2 md:mb-4">
+              <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2 md:mb-4 bg-clip-text text-transparent bg-gradient-to-r from-electric to-blue-500">
                 The Technology
               </h2>
               <p className="mt-2 text-base md:text-lg text-stone">
@@ -445,7 +602,7 @@ export default function Home(): React.ReactNode {
                 <motion.div
                   key={i}
                   variants={FADE_UP}
-                  className="bento-card p-4 sm:p-6 bg-white rounded-lg shadow-sm h-full flex flex-col"
+                  className="bento-card p-4 sm:p-6 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm h-full flex flex-col"
                 >
                   <h3 className="text-lg md:text-xl font-medium mb-2 sm:mb-3">
                     {item.title}
@@ -464,42 +621,53 @@ export default function Home(): React.ReactNode {
           viewport={{ once: true, margin: "-100px" }}
           variants={FADE_UP}
           id="try-it"
-          className="section-alt py-12 md:py-16"
+          className="section-alt py-12 md:py-16 relative overflow-hidden"
         >
-          <div className="container-tight px-4 md:px-6">
+          <div className="absolute inset-0 bg-sky/5"></div>
+          <NeuralBackground />
+          <div className="container-tight px-4 md:px-6 relative z-10">
             <div className="grid gap-8 md:grid-cols-2 items-center">
               <motion.div variants={FADE_IN} className="space-y-4 md:space-y-6">
                 <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold">
-                  <span className="text-electric">Kickstart</span> your virality
-                  edge today
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-electric to-blue-500">
+                    Kickstart
+                  </span>{" "}
+                  your virality edge today
                 </h2>
                 <p className="text-base md:text-lg text-stone">
                   Become a top Zora trader with our AI-powered platform and get
                   ahead of the curve.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4 max-w-full sm:max-w-md">
+                <form
+                  onSubmit={handleEmailSubmit}
+                  className="flex flex-col sm:flex-row gap-4 max-w-full sm:max-w-md"
+                >
                   <div className="flex-1">
                     <Input
                       placeholder="Enter your email"
                       className="h-12 rounded-full"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                     />
                   </div>
                   <div className="w-full sm:w-auto">
                     <Button
+                      type="submit"
                       size="lg"
                       className="rounded-full w-full sm:w-auto px-4 sm:px-8 bg-electric hover:bg-electric/90"
                     >
                       Get Started
                     </Button>
                   </div>
-                </div>
+                </form>
               </motion.div>
               <motion.div
                 variants={FADE_IN}
                 className="relative h-[250px] md:h-[300px] w-full rounded-xl border bg-ghost p-2 shadow-sm"
               >
                 <Image
-                  src="/placeholder.svg?height=300&width=500&text=Dashboard%20Preview"
+                  src="/dashboard.svg?height=300&width=500&text=Dashboard%20Preview"
                   alt="Dashboard Preview"
                   width={500}
                   height={300}
