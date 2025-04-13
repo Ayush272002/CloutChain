@@ -387,7 +387,7 @@ export default function Home(): React.ReactNode {
                   Trending Now
                 </h2>
                 <p className="mt-2 text-base md:text-lg text-stone">
-                  See what's gaining momentum in real-time across the Zora
+                  See what&apos;s gaining momentum in real-time across the Zora
                   ecosystem
                 </p>
               </motion.div>

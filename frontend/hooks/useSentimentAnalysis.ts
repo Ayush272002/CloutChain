@@ -45,7 +45,9 @@ export default function useSentimentAnalysis(posts: string[]) {
             const result = await sentimentAnalyzer(text);
             return {
               text,
+              // @ts-ignore
               sentiment: result[0].label, // Get the sentiment label
+              // @ts-ignore
               score: result[0].score, // Get the score of the sentiment
             };
           })
