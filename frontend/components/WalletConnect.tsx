@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useAccount, useConnect, useDisconnect, useBalance } from "wagmi";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Wallet,
   LogOut,
@@ -10,7 +10,6 @@ import {
   ExternalLink,
   Copy,
   Check,
-  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,10 +42,28 @@ export default function WalletConnect() {
 
   const { data: balance } = useBalance({
     address,
-    chainId: 999999999,
+    chainId: 11155111,
   });
 
-  const formatAddress = (address: string) => {
+  const balanceRes = useBalance({
+    address,
+    chainId: 11155111,
+  });
+
+  // useEffect(() => {
+  //   console.log(JSON.stringify(balanceRes));
+  // }, [balanceRes]);
+
+  // useEffect(() => {
+  //   if (address) {
+  //     console.log('Address:', address);
+  //     console.log('Balance:', balance);
+  //   }
+  // }, [address, balance]);
+
+  // @ts-ignore
+  const formatAddress = (address) => {
+    if (!address) return "";
     return `${address.substring(0, 6)}...${address.substring(
       address.length - 4
     )}`;
@@ -62,19 +79,19 @@ export default function WalletConnect() {
 
   const openExplorer = () => {
     if (address) {
-      window.open(
-        `https://sepolia.explorer.zora.energy/address/${address}`,
-        "_blank"
-      );
+      // explorer URL for Sepolia
+      window.open(`https://sepolia.etherscan.io/address/${address}`, "_blank");
     }
   };
 
-  const handleConnectClick = (connector: any) => {
+  // @ts-ignore
+  const handleConnectClick = (connector) => {
     connect({ connector });
     setIsWalletModalOpen(false);
   };
 
-  const getWalletIcon = (name: string) => {
+  // @ts-ignore
+  const getWalletIcon = (name) => {
     switch (name.toLowerCase()) {
       case "metamask":
         return (
@@ -194,47 +211,49 @@ export default function WalletConnect() {
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
-              className="border-electric/30 bg-sky/20 hover:bg-sky/30 text-charcoal rounded-full"
+              className="border border-[#B5D8FF] bg-white hover:bg-slate-200 text-sky-300 font-medium rounded-lg px-4 py-2 shadow-sm transition-all"
             >
               <div className="flex items-center">
-                <div className="h-2 w-2 rounded-full bg-mint mr-2 animate-pulse"></div>
-                <span className="mr-2">{formatAddress(address)}</span>
-                <span className="font-mono text-electric">
+                <div className="h-2 w-2 rounded-full bg-emerald-500 mr-2 animate-pulse"></div>
+                <span className="mr-2 text-black">
+                  {formatAddress(address)}
+                </span>
+                <span className="font-mono text-[#0CACC4]">
                   {balance?.formatted
                     ? Number.parseFloat(balance.formatted).toFixed(4)
                     : "0.0000"}{" "}
                   {balance?.symbol}
                 </span>
-                <ChevronDown className="ml-2 h-4 w-4" />
+                <ChevronDown className="ml-2 h-4 w-4 text-gray-500" />
               </div>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56 bg-white border border-ghost rounded-lg">
-            <div className="px-2 py-1.5 text-xs text-stone">
+          <DropdownMenuContent className="w-56 bg-[#EAF4FF] border border-[#B5D8FF] text-gray-800 shadow-md rounded-xl">
+            <div className="px-2 py-1.5 text-xs text-[#4A8CFF] font-semibold">
               Connected Wallet
             </div>
-            <DropdownMenuSeparator className="bg-ghost" />
+            <DropdownMenuSeparator className="bg-[#D0E7FF]" />
             <div className="px-2 py-2">
-              <p className="text-sm font-medium text-charcoal mb-1">Balance</p>
-              <p className="text-lg font-mono text-electric">
+              <p className="text-sm font-medium text-gray-700 mb-1">Balance</p>
+              <p className="text-lg font-mono text-[#0CACC4]">
                 {balance?.formatted
                   ? Number.parseFloat(balance.formatted).toFixed(4)
                   : "0.0000"}{" "}
                 {balance?.symbol}
               </p>
             </div>
-            <DropdownMenuSeparator className="bg-ghost" />
+            <DropdownMenuSeparator className="bg-[#D0E7FF]" />
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <DropdownMenuItem
-                    className="cursor-pointer flex items-center text-stone hover:text-charcoal hover:bg-sky/20"
+                    className="cursor-pointer flex items-center text-gray-700 hover:text-black hover:bg-[#D8EDFF]"
                     onClick={copyAddress}
                   >
                     {copied ? (
-                      <Check className="mr-2 h-4 w-4 text-mint" />
+                      <Check className="mr-2 h-4 w-4 text-green-500" />
                     ) : (
-                      <Copy className="mr-2 h-4 w-4 text-electric" />
+                      <Copy className="mr-2 h-4 w-4 text-gray-500" />
                     )}
                     {copied ? "Copied!" : "Copy Address"}
                   </DropdownMenuItem>
@@ -245,15 +264,15 @@ export default function WalletConnect() {
               </Tooltip>
             </TooltipProvider>
             <DropdownMenuItem
-              className="cursor-pointer flex items-center text-stone hover:text-charcoal hover:bg-sky/20"
+              className="cursor-pointer flex items-center text-gray-700 hover:text-black hover:bg-[#D8EDFF]"
               onClick={openExplorer}
             >
-              <ExternalLink className="mr-2 h-4 w-4 text-electric" />
+              <ExternalLink className="mr-2 h-4 w-4 text-gray-500" />
               View on Explorer
             </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-ghost" />
+            <DropdownMenuSeparator className="bg-[#D0E7FF]" />
             <DropdownMenuItem
-              className="cursor-pointer flex items-center text-red-500 hover:text-red-600 hover:bg-red-50"
+              className="cursor-pointer flex items-center text-rose-500 hover:text-rose-600 hover:bg-rose-100"
               onClick={() => disconnect()}
             >
               <LogOut className="mr-2 h-4 w-4" />
@@ -262,45 +281,70 @@ export default function WalletConnect() {
           </DropdownMenuContent>
         </DropdownMenu>
       ) : (
-        <Button
-          onClick={() => setIsWalletModalOpen(true)}
-          className="rounded-full border-electric bg-electric hover:bg-electric/90 text-white"
-        >
-          <Wallet className="mr-2 h-4 w-4" />
-          Connect Wallet
-        </Button>
-      )}
-
-      <Dialog open={isWalletModalOpen} onOpenChange={setIsWalletModalOpen}>
-        <DialogContent className="bg-white border-ghost rounded-lg sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-electric to-blue-500">
+        <>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button
+              onClick={() => setIsWalletModalOpen(true)}
+              className="bg-[#4A8CFF] text-white hover:bg-[#357ce7] focus:outline-none focus:ring-2 focus:ring-[#4A8CFF] shadow-sm"
+            >
+              <Wallet className="mr-2 h-4 w-4" />
               Connect Wallet
-            </DialogTitle>
-            <DialogDescription className="text-stone">
-              Connect your wallet to access advanced prediction features
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-3 py-4">
-            {connectors.map((connector) => (
-              <Button
-                key={connector.id}
-                onClick={() => handleConnectClick(connector)}
-                variant="outline"
-                className="flex justify-between items-center h-14 border-ghost hover:border-electric hover:bg-sky/10 text-charcoal rounded-lg"
-              >
-                <div className="flex items-center gap-3">
-                  {getWalletIcon(connector.name)}
-                  <span className="text-base font-medium">
-                    {connector.name}
-                  </span>
-                </div>
-                <ChevronRight className="h-4 w-4 text-stone" />
-              </Button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
+            </Button>
+          </motion.div>
+
+          <Dialog open={isWalletModalOpen} onOpenChange={setIsWalletModalOpen}>
+            <DialogContent className="bg-white border border-[#B5D8FF] text-gray-800 sm:max-w-md shadow-xl rounded-2xl">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-bold text-center text-gray-900">
+                  Connect Wallet
+                </DialogTitle>
+                <DialogDescription className="text-gray-500 text-center">
+                  Choose your preferred wallet to connect to Sepolia Testnet
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="grid grid-cols-1 gap-4 py-4">
+                {connectors.map((connector) => (
+                  <Button
+                    key={connector.uid}
+                    variant="outline"
+                    className={`flex items-center justify-start gap-3 p-4 h-auto text-left rounded-xl transition-all duration-200 ${
+                      connector.name.toLowerCase() === "metamask"
+                        ? "border-[#6C8EFC] bg-[#E6F0FF] hover:bg-[#D0E2FF]"
+                        : "border-[#A5C9FF] hover:border-[#4A8CFF] hover:bg-[#E6F0FF]"
+                    }`}
+                    onClick={() => handleConnectClick(connector)}
+                  >
+                    <div className="flex-shrink-0">
+                      {getWalletIcon(connector.name)}
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900">
+                        {connector.name}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Connect using {connector.name}
+                      </div>
+                    </div>
+                  </Button>
+                ))}
+              </div>
+
+              <div className="text-xs text-gray-500 text-center px-4">
+                By connecting your wallet, you agree to our{" "}
+                <span className="underline cursor-pointer hover:text-gray-700">
+                  Terms of Service
+                </span>{" "}
+                and{" "}
+                <span className="underline cursor-pointer hover:text-gray-700">
+                  Privacy Policy
+                </span>
+                .
+              </div>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
     </div>
   );
 }
