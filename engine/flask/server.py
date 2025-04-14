@@ -5,27 +5,36 @@ import requests
 from PIL import Image as PILImage
 from io import BytesIO
 import torch
-from IPython.display import Image, display
+from IPython.display import Image
+from flask import Flask, request, jsonify
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import MinMaxScaler
-scaler = MinMaxScaler()
 import math
+import easyocr
 import subprocess
+import os
 
+app = Flask(__name__)
+scaler = MinMaxScaler()
 
 subprocess.check_call([ 'pip', 'install', 'git+https://github.com/openai/CLIP.git', '--quiet'])
 import clip
 
-with open('text_embedding_pipeline.pk', 'rb') as f:
+base_dir = os.path.join(os.path.dirname(__file__), '..', 'model')
+
+with open(os.path.join(base_dir, 'text_embedding_pipeline.pk'), 'rb') as f:
     text_embedding_pipe = pickle.load(f)
-with open('sentiment_pipeline.pk', 'rb') as g:
+
+with open(os.path.join(base_dir, 'sentiment_pipeline.pk'), 'rb') as g:
     sentiment_pipe = pickle.load(g)
-with open('ocr.pk', 'rb') as h:
-    ocr_pipe = pickle.load(h)
-with open('img_embedding_model.pk', 'rb') as i:
+
+with open(os.path.join(base_dir, 'img_embedding_model.pk'), 'rb') as i:
     model = pickle.load(i)
-with open('img_embedding_preprocess.pk', 'rb') as j:
+
+with open(os.path.join(base_dir, 'img_embedding_preprocess.pk'), 'rb') as j:
     preprocess = pickle.load(j)
+
+ocr_pipe = easyocr.Reader(['en'])
 
 # defining functions
 def ocr_img_from_url(img_url):
@@ -89,26 +98,26 @@ def preprocess_obj (obj):
     columns_to_normalise = ['totalVolume', 'volume24h', 'marketCap', 'uniqueHolders', 'transferCount']
     obj[columns_to_normalise] = scaler.transform(pd.DataFrame([obj[columns_to_normalise]]))[0]
     
-    if obj['name'] is not np.nan:
+    if obj['name'] is not np.nan and obj['name'] != '':
         obj['name_sentiment'] = get_sentiment(obj['name'])
         obj['name_embed'] = text_embed_from_str(obj['name'])
-    elif obj['name'] is np.nan:
+    elif obj['name'] is np.nan or obj['name'] != '':
         obj['name_sentiment'] = 0
         obj['name_embed'] = blank_text_embed
     
-    if obj['description'] is not np.nan:
+    if obj['description'] is not np.nan and obj['description'] != '':
         obj['description_sentiment'] = get_sentiment(obj['description'])
         obj['description_embed'] = text_embed_from_str(obj['description'])
-    elif obj['description'] is np.nan:
+    elif obj['description'] is np.nan or obj['description'] == '':
         obj['description_sentiment'] = 0
         obj['description_embed'] = blank_text_embed
 
     # IMPORTANT!!!
     # Change the name to the corresponding image cdn column
-    if obj['previewImageUrl'] is not np.nan:
+    if obj['previewImageUrl'] is not np.nan and obj['previewImageUrl'] != '':
         obj['img_embed'] = img_embed_from_url(obj['previewImageUrl'])
         obj['img_ocr'] = ocr_img_from_url(obj['previewImageUrl'])
-    elif obj['previewImageUrl']is np.nan:
+    elif obj['previewImageUrl']is np.nan or obj['previewImageUrl'] != '':
         obj['img_embed'] = blank_img_embed
         obj['img_ocr'] = ''
 
@@ -126,18 +135,18 @@ def preprocess_df (df):
     columns_to_normalise = ['totalVolume', 'volume24h', 'marketCap', 'uniqueHolders', 'transferCount']
     df[columns_to_normalise] = scaler.fit_transform(df[columns_to_normalise])
     
-    df[['name', 'description']] = df[['name', 'description']].fillna('')
+    df[['name', 'description', 'mediaPreviewUrl']] = df[['name', 'description', 'mediaPreviewUrl']].fillna('')
 
-    df['name_sentiment'] = df['name'].apply(lambda x: get_sentiment(x) if x != '' else 0 )
-    df['name_embed'] = df['name'].apply(lambda x: text_embed_from_str(x) if x != '' else blank_text_embed)
+    df['name_sentiment'] = df['name'].apply(lambda x: 0 if (x == '' or x is np.nan) else get_sentiment(x) )
+    df['name_embed'] = df['name'].apply(lambda x: blank_text_embed if (x == '' or x is np.nan) else text_embed_from_str(x))
     
-    df['description_sentiment'] = df['description'].apply(lambda x: get_sentiment(x) if x != '' else 0 )
-    df['description_embed'] = df['description'].apply(lambda x: text_embed_from_str(x) if x != '' else blank_text_embed)
+    df['description_sentiment'] = df['description'].apply(lambda x: 0 if (x == '' or x is np.nan) else get_sentiment(x) )
+    df['description_embed'] = df['description'].apply(lambda x: blank_text_embed if (x == '' or x is np.nan) else text_embed_from_str(x))
 
-    df['img_embed'] = df['mediaPreviewUrl'].apply(lambda x: img_embed_from_url(x) if x is not np.nan else blank_img_embed)
-    df['img_ocr'] = df['mediaPreviewUrl'].apply(lambda x: ocr_img_from_url(x) if x is not np.nan else '')
-    df['img_text_sentiment'] = df['img_ocr'].apply(lambda x: get_sentiment(x) if x != '' else 0 )
-    df['img_text_embed'] = df['img_ocr'].apply(lambda x: text_embed_from_str(x) if x != '' else blank_text_embed)
+    df['img_embed'] = df['mediaPreviewUrl'].apply(lambda x: blank_img_embed if (x == '' or x is np.nan) else img_embed_from_url(x))
+    df['img_ocr'] = df['mediaPreviewUrl'].apply(lambda x: '' if (x == '' or x is np.nan) else ocr_img_from_url(x))
+    df['img_text_sentiment'] = df['img_ocr'].apply(lambda x: 0 if (x == '' or x is np.nan) else get_sentiment(x) )
+    df['img_text_embed'] = df['img_ocr'].apply(lambda x: blank_text_embed if (x == '' or x is np.nan) else text_embed_from_str(x))
 
     # Convert timestamps to numerical values
     df['createdAt'] = pd.to_datetime(df['createdAt'])
@@ -177,20 +186,50 @@ def calculate_sim(obj1, obj2):
     embed_sim = img_embed + name_embed + description_embed + img_text_embed
     
     total_distance = w_sentiment * (sentiment_sim) + w_embed * (embed_sim)  + w_financial * (financial_sim)
-    return total_distance 
+    sentiment_sim = sentiment_sim/3
+    embed_sim = embed_sim/4
+    return  sentiment_sim, embed_sim, financial_sim, total_distance 
     
-# Example of data, change this in our deployed scenario, data must be in dataframe
-# ALSO: make sure the columns are appropriate to the functions
-df_big = pd.read_csv('Coin.csv')
-df_coin = pd.read_csv('Coin_new.csv')
-example_post = df_big.loc[0].copy()
+# # Example of data, change this in our deployed scenario, data must be in dataframe
+# # ALSO: make sure the columns are appropriate to the functions
+# df_big = pd.read_csv('Coin.csv')
+# df_coin = pd.read_csv('Coin_new.csv')
+# example_post = df_big.loc[0].copy()
 
-df_coin_preprocess = preprocess_df(df_coin)
-example_post_preprocess = preprocess_obj(example_post)
+# df_coin_preprocess = preprocess_df(df_coin)
+# example_post_preprocess = preprocess_obj(example_post)
 
-df_coin_preprocess['similarity'] = df_coin_preprocess.apply(lambda x: calculate_sim(example_post_preprocess, x), axis = 1)
-weighted_mean_similarity = np.average(df_coin_preprocess['similarity'], weights=df_coin_preprocess['time_weight'])
+
+
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    try:
+        data = request.get_json()
+        df_coin = pd.DataFrame(data['coin_data'])
+        example_post = pd.Series(data['example_post'])
+        
+        df_coin_preprocess = preprocess_df(df_coin)
+        example_post_preprocess = preprocess_obj(example_post)
+        
+
+        df_coin_preprocess[['sentiment_sim', 'embed_sim', 'financial_sim', 'similarity']] = df_coin_preprocess.apply(
+            lambda x: pd.Series(calculate_sim(example_post_preprocess, x)), axis=1
+        )
+        print("SUKSES MANTAP ANJAY")
+        weighted_mean_sentiment_similarity = np.average(df_coin_preprocess['sentiment_sim'], weights=df_coin_preprocess['time_weight'])
+        weighted_mean_embed_similarity = np.average(df_coin_preprocess['embed_sim'], weights=df_coin_preprocess['time_weight'])
+        weighted_mean_financial_similarity = np.average(df_coin_preprocess['financial_sim'], weights=df_coin_preprocess['time_weight'])
+        weighted_mean_similarity = np.average(df_coin_preprocess['similarity'], weights=df_coin_preprocess['time_weight'])
+
+        return jsonify({'weighted_sentiment_similarity': weighted_mean_sentiment_similarity,
+                        'weighted_embed_similarity': weighted_mean_embed_similarity,
+                        'weighted_financial_similarity': weighted_mean_financial_similarity,
+                        'weighted_total_similarity': weighted_mean_similarity})
+    except Exception as e:
+        return jsonify({'error': str(e)})
 
 model, preprocess = clip.load("ViT-B/32", device = "cpu")
 if __name__ == "__main__":
-    print(weighted_mean_similarity)
+    torch.backends.mps.is_available = lambda: False  # Disable MPS explicitly
+    app.run(debug=True)
